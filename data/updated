@@ -8,9 +8,11 @@ from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.preprocessing import LabelEncoder
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 
 # Load the CSV file
-file_path = ('/Users/posolga/Desktop/vgchartz-2024.csv')
+file_path = ('/Users/lexpaton/Desktop/archive/vgchartz-2024.csv')
 df = pd.read_csv(file_path)
 
 # Display the dataframe
@@ -109,3 +111,47 @@ new_game_df = new_game_df[X.columns]
 # Make prediction
 predicted_sales = model.predict(new_game_df)
 print(f'Predicted Total Sales: {predicted_sales[0]}')
+
+# Create classification via decision tree
+# Define thresholds for impact of title
+tentpole_threshold = df['total_sales'].quantile(0.95)  # Top 25% sales
+moderate_threshold = df['total_sales'].quantile(0.25)
+
+# Create a new column for sales impact
+def categorize_sales_impact(sales):
+    if sales >= tentpole_threshold:
+        return 'tentpole impact'
+    elif sales >= moderate_threshold:
+        return 'moderate impact'
+    else:
+        return 'minor impact'
+
+df['sales_impact'] = df['total_sales'].apply(categorize_sales_impact)
+print(df['sales_impact'].value_counts())
+
+# --------------------------
+# Building decision tree classifier model
+# Features and target variable
+X = df.drop(['total_sales', 'na_sales', 'jp_sales', 'sales_impact'], axis=1)  # Drop columns that won't be used as features
+y = df['sales_impact']
+
+# Split the data into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Train the model
+model = DecisionTreeClassifier(random_state=42)
+model.fit(X_train, y_train)
+
+# Make predictions
+y_pred = model.predict(X_test)
+
+# Evaluate the model
+accuracy = accuracy_score(y_test, y_pred)
+report = classification_report(y_test, y_pred)
+conf_matrix = confusion_matrix(y_test, y_pred)
+
+print(f'Accuracy: {accuracy:.2f}')
+print('Classification Report:')
+print(report)
+print('Confusion Matrix:')
+print(conf_matrix)
